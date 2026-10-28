@@ -8,6 +8,26 @@
   var root = document.documentElement;
   function ready() { root.classList.remove('vc-pending'); }
 
+  // ---- debug panel: open the site with ?debug=1 on the end of the address ----
+  var DEBUG = /[?&]debug/.test(location.search);
+  var dbgBox = null, dbgLines = [];
+  function log(msg) {
+    if (!DEBUG) return;
+    try {
+      if (!dbgBox) {
+        dbgBox = document.createElement('pre');
+        dbgBox.style.cssText = 'position:fixed;z-index:99999;left:0;right:0;bottom:0;margin:0;padding:6px 8px;max-height:45vh;overflow:hidden;pointer-events:none;background:rgba(0,0,0,.85);color:#7CFF9B;font:11px/1.3 monospace;white-space:pre-wrap;visibility:visible';
+        (document.body || root).appendChild(dbgBox);
+      }
+      dbgLines.push(msg);
+      if (dbgLines.length > 14) dbgLines.shift();
+      dbgBox.textContent = dbgLines.join('\n');
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) { log('ERROR: ' + e.message + ' @' + (e.lineno || '?')); });
+  window.addEventListener('unhandledrejection', function (e) { log('PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)); });
+  log('intro.js running, version phone-v3.1');
+
   var header = document.querySelector('header');
   window.__vcIntro = 'phone-v3';
   // Many phones have "reduce motion" / battery-saver animation settings turned on, which would
@@ -17,6 +37,7 @@
   var reduce = RESPECT_REDUCED_MOTION && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Coming back from Spotify login (?code=...) should land straight in the app.
   var returning = window.__vcReturning || /[?&](code|error)=/.test(location.search);
+  log('gsap: ' + !!window.gsap + '  ScrollTrigger: ' + !!window.ScrollTrigger + '  header: ' + !!header + '  returning: ' + !!returning + '  reduce: ' + !!reduce);
   if (!window.gsap || !window.ScrollTrigger) console.warn('VibeCapsule intro: GSAP did not load, skipping intro');
   if (!header || reduce || returning || !window.gsap || !window.ScrollTrigger) { ready(); return; }
 
@@ -77,6 +98,7 @@
   var pendingDecode = {};
   var done = 0, started = false, finished = false, tl = null, ticking = false;
   var state = { frame: 0 };
+  var lastLogged = -1, lastDbg = 0;
 
   /* ---------- download all frames as compressed blobs ---------- */
   function dataToBlob(u) {
@@ -94,6 +116,7 @@
     var p = Math.round((done / N) * 100);
     fill.style.width = p + '%';
     pct.textContent = 'Loading ' + p + '%';
+    if (p % 25 === 0 && p !== lastLogged) { lastLogged = p; log('frames downloaded: ' + done + '/' + N + ' (ok ' + blobs.filter(Boolean).length + ')'); }
     if (done >= N) start();
   }
   for (var i = 0; i < N; i++) {
@@ -176,6 +199,7 @@
       setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 12000);
       return;
     }
+    log('start(): blobs ok ' + blobs.filter(Boolean).length + ', decoding first frames');
     ensure(0);
     Promise.race([
       Promise.all(Object.keys(pendingDecode).map(function (k) { return pendingDecode[k]; }).slice(0, 3)),
@@ -185,6 +209,7 @@
 
   function begin() {
     if (finished) return;
+    log('begin(): canvas ' + (stage.clientWidth) + 'x' + (stage.clientHeight) + ', bitmaps ' + bitmaps.filter(Boolean).length + ', wrap height ' + wrap.offsetHeight);
     sizeCanvas(); render();
     loader.classList.add('vc-out');
     setTimeout(function () { if (loader.parentNode) loader.parentNode.removeChild(loader); }, 400);
@@ -194,6 +219,7 @@
       scrollTrigger: {
         trigger: wrap, start: 'top top', end: 'bottom bottom', scrub: 0.4,
         onUpdate: function (self) {
+          if (DEBUG && Date.now() - lastDbg > 400) { lastDbg = Date.now(); log('scroll ' + Math.round(window.pageYOffset) + '  progress ' + self.progress.toFixed(2) + '  frame ' + Math.round(state.frame) + '  bitmaps ' + bitmaps.filter(Boolean).length); }
           cue.classList.toggle('vc-hide', self.progress > 0.02);
           endCue.classList.toggle('vc-show', self.progress > 0.95);
         }
@@ -206,6 +232,7 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
     ScrollTrigger.refresh();
+    log('scroll animation armed. Now scroll down slowly.');
   }
 
   /* ---------- leaving the intro ---------- */
@@ -221,6 +248,7 @@
   function finish(toTop) {
     if (finished) return;
     finished = true;
+    log('finish(' + (toTop ? 'skip' : 'scrolled into app') + ') at scrollY ' + Math.round(window.pageYOffset));
     var sy = window.pageYOffset || 0;
     var h = wrap.offsetHeight;
     window.removeEventListener('scroll', onScroll);
