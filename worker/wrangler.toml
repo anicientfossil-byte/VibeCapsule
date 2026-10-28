@@ -1,0 +1,7 @@
+name = "vibecapsule-api"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+# Comma-separated list of sites allowed to call this API. Change to your Pages origin.
+ALLOWED_ORIGINS = "https://YOUR-GITHUB-USERNAME.github.io,http://localhost:5173"
