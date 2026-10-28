@@ -34,7 +34,7 @@ function gs(u){return new Promise(function(res){var s=document.createElement('sc
   [['intro.css','<link rel="stylesheet" href="intro.css">'],['intro.js','src="intro.js"'],['GSAP','gsap.min.js'],['ScrollTrigger','ScrollTrigger.min.js']].forEach(function(p){
    idx.indexOf(p[1])>=0?row('ok','index.html contains '+p[0]):row('bad','index.html is missing the '+p[0]+' line','Upload the new index.html from the "upload-1" folder.')})}
  await file('intro.css');
- var js=await file('intro.js','phone-v3');
+ var js=await file('intro.js','phone-v3.1');
  await file('config.js');
  for(const n of ['f001.jpg','f045.jpg','f090.jpg','f091.jpg','f135.jpg','f180.jpg'])await frame(n);
  var g=await gs('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js');
@@ -46,6 +46,32 @@ function gs(u){return new Promise(function(res){var s=document.createElement('sc
  var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  row(rm?'warn':'ok','Reduce-motion setting: '+(rm?'ON':'off'),rm?'The new intro.js ignores this. The OLD one hid the intro when it was on.':'');
  row('ok','Your browser',navigator.userAgent+' | screen '+screen.width+'x'+screen.height);
+
+ // ---- live test of the real page inside a frame ----
+ var sum2=document.createElement('div');sum2.className='r warn';sum2.innerHTML='<b>LIVE TEST</b><small>Loading your real page below and scrolling it. This takes up to 40 seconds. Keep this page open.</small>';out.appendChild(sum2);
+ var f=document.createElement('iframe');f.src='index.html?livecheck='+Date.now();
+ f.style.cssText='width:360px;max-width:100%;height:560px;border:3px solid #0F1A34;background:#fff;display:block;margin:8px 0';
+ document.body.appendChild(f);
+ var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+ await new Promise(function(r){f.onload=r});
+ var w=f.contentWindow,d=f.contentDocument,t0=Date.now();
+ while(Date.now()-t0<35000){await sleep(500);if(d.querySelector('#vc-intro')&&!d.querySelector('.vc-loader'))break;if(!d.querySelector('#vc-intro')&&w.__vcIntro&&Date.now()-t0>3000)break}
+ sum2.remove();
+ w.__vcIntro?row('ok','intro.js ran inside your real page','version: '+w.__vcIntro):row('bad','intro.js did NOT run inside your real page','The page is not loading intro.js. Check that index.html has the <script defer src="intro.js"> line and that intro.js is at the top level of the repo.');
+ row(w.gsap&&w.ScrollTrigger?'ok':'bad','GSAP + ScrollTrigger inside your real page',w.gsap?'present':'missing: they did not load in the real page');
+ row('ok','Scripts in your page',[].map.call(d.scripts,function(s){return s.src?s.src.replace(location.origin,''):'(inline)'}).join(' , '));
+ row('ok','Page state','html class = "'+d.documentElement.className+'"');
+ var wrapEl=d.getElementById('vc-intro');
+ if(!wrapEl){row('bad','The intro was not created','It was skipped or stopped early. See the lines above.')}
+ else{
+  var cv=d.querySelector('.vc-canvas');
+  var sig=function(){try{var c=cv.getContext('2d'),dd=c.getImageData(0,0,cv.width,cv.height).data,a=0;for(var i=0;i<dd.length;i+=97)a=(a*31+dd[i])%1000003;return a}catch(e){return 'err'}};
+  row('ok','Intro exists','page height '+wrapEl.offsetHeight+'px, canvas '+cv.width+'x'+cv.height);
+  var a=sig();
+  w.scrollTo(0,Math.round(wrapEl.offsetHeight*0.35));await sleep(1800);var b=sig();
+  w.scrollTo(0,Math.round(wrapEl.offsetHeight*0.7));await sleep(1800);var c2=sig();
+  (a!==b&&b!==c2)?row('ok','Animation changes when scrolled','The picture changed at 35% and 70% of the scroll.'):row('bad','Animation does NOT change when scrolled','frame signatures: '+a+' / '+b+' / '+c2+' (all the same = frames are not updating)');
+ }
  var s=document.getElementById('sum');
  if(bad){s.style.background='#E0533C';s.textContent=bad+' problem(s) found. Screenshot this page and send it to Claude.'}
  else{s.textContent='Everything looks fine. If the intro still does not play, screenshot this page and tell Claude.'}
