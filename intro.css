@@ -1,0 +1,39 @@
+/* VibeCapsule scroll intro */
+html.vc-pending body{visibility:hidden}
+html.vc-lock,html.vc-lock body{overflow:hidden}
+
+.vc-intro{position:relative;height:550vh;height:550svh;background:#EEECDF}
+.vc-stage{position:sticky;top:0;width:100%;height:100vh;height:100svh;overflow:hidden;background:#EEECDF}
+.vc-canvas{display:block;width:100%;height:100%}
+
+.vc-skip,.vc-loader button{
+  font:700 11px/1 'Space Mono',monospace;text-transform:uppercase;letter-spacing:.04em;
+  background:#FBF9F4;color:#0F1A34;border:2px solid #0F1A34;box-shadow:3px 3px 0 #0F1A34;
+  padding:8px 12px;cursor:pointer}
+.vc-skip{position:absolute;z-index:3;right:12px;top:12px;top:max(12px,env(safe-area-inset-top))}
+.vc-skip:active,.vc-loader button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #0F1A34}
+
+.vc-cue,.vc-end{
+  position:absolute;z-index:3;left:50%;transform:translateX(-50%);
+  bottom:24px;bottom:max(24px,env(safe-area-inset-bottom));
+  font:700 11px/1.3 'Space Mono',monospace;text-transform:uppercase;letter-spacing:.06em;text-align:center;
+  background:#0F1A34;color:#FBF9F4;padding:8px 14px;border:2px solid #0F1A34;
+  transition:opacity .25s;white-space:nowrap;max-width:92vw}
+.vc-cue{animation:vc-bob 1.2s steps(2) infinite}
+.vc-cue.vc-hide{opacity:0;animation:none}
+.vc-end{background:#E0533C;opacity:0;pointer-events:none}
+.vc-end.vc-show{opacity:1}
+@keyframes vc-bob{50%{transform:translateX(-50%) translateY(-4px)}}
+
+.vc-loader{
+  position:fixed;inset:0;z-index:100;visibility:visible;background:#EEECDF;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  font-family:'Space Mono',monospace;color:#0F1A34;transition:opacity .35s}
+.vc-loader.vc-out{opacity:0;pointer-events:none}
+.vc-loader b{font:900 clamp(28px,6vw,56px)/1 Archivo,Inter,sans-serif;letter-spacing:-.04em;text-transform:uppercase}
+.vc-loader .vc-bar{width:min(320px,70vw);height:14px;border:2px solid #0F1A34;background:#FBF9F4}
+.vc-loader .vc-bar i{display:block;height:100%;width:0;background:#E0533C}
+.vc-loader small{font-size:11px;font-weight:700;letter-spacing:.06em}
+
+/* seam between the last frame and the app */
+html.vc-intro-on header{border-top:3px solid #0F1A34}
