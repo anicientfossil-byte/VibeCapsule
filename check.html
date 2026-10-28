@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VibeCapsule check</title>
+<style>
+body{margin:0;padding:16px;background:#FBF9F4;color:#2C221E;font:14px/1.4 ui-monospace,Menlo,monospace}
+h1{font:900 22px/1 Helvetica,Arial,sans-serif;margin:0 0 12px;text-transform:uppercase}
+.r{border:2px solid #0F1A34;padding:8px 10px;margin:6px 0;background:#fff;word-break:break-word}
+.ok{border-left:10px solid #2e9e4f}.bad{border-left:10px solid #E0533C;background:#fff1ee}.warn{border-left:10px solid #e0a63c}
+b{display:block}small{color:#555}
+#sum{margin:12px 0;padding:12px;background:#0F1A34;color:#FBF9F4;font-weight:700}
+</style></head><body>
+<h1>VibeCapsule check</h1>
+<div id="sum">Running checks...</div>
+<div id="out"></div>
+<script>
+var out=document.getElementById('out'),bad=0,warn=0;
+function row(cls,title,detail){if(cls==='bad')bad++;if(cls==='warn')warn++;
+ var d=document.createElement('div');d.className='r '+cls;d.innerHTML='<b>'+(cls==='ok'?'OK  ':cls==='bad'?'FAIL  ':'NOTE  ')+title+'</b>'+(detail?'<small>'+detail+'</small>':'');out.appendChild(d)}
+function get(u,opts){return fetch(u+(u.indexOf('?')<0?'?':'&')+'t='+Date.now(),Object.assign({cache:'no-store'},opts||{}))}
+async function file(name,mustHave){
+ try{var r=await get(name);if(!r.ok){row('bad',name,'not found (HTTP '+r.status+'). This file is missing from your repo, or is in a wrong folder.');return null}
+  var t=await r.text();
+  if(mustHave&&t.indexOf(mustHave)<0){row('bad',name,'found, but it is the OLD version (missing "'+mustHave+'"). Re-upload the new file.');return t}
+  row('ok',name,Math.round(t.length/1024)+' KB');return t}
+ catch(e){row('bad',name,'could not load: '+e);return null}}
+async function frame(n){
+ try{var r=await get('frames/'+n);if(!r.ok)row('bad','frames/'+n,'not found (HTTP '+r.status+'). The frames folder is incomplete.');else row('ok','frames/'+n,Math.round((await r.blob()).size/1024)+' KB')}
+ catch(e){row('bad','frames/'+n,'could not load: '+e)}}
+function gs(u){return new Promise(function(res){var s=document.createElement('script');s.src=u;s.onload=function(){res(true)};s.onerror=function(){res(false)};document.head.appendChild(s)})}
+(async function(){
+ var idx=await file('index.html');
+ if(idx){
+  [['intro.css','<link rel="stylesheet" href="intro.css">'],['intro.js','src="intro.js"'],['GSAP','gsap.min.js'],['ScrollTrigger','ScrollTrigger.min.js']].forEach(function(p){
+   idx.indexOf(p[1])>=0?row('ok','index.html contains '+p[0]):row('bad','index.html is missing the '+p[0]+' line','Upload the new index.html from the "upload-1" folder.')})}
+ await file('intro.css');
+ var js=await file('intro.js','phone-v3');
+ await file('config.js');
+ for(const n of ['f001.jpg','f045.jpg','f090.jpg','f091.jpg','f135.jpg','f180.jpg'])await frame(n);
+ var g=await gs('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js');
+ var st=g&&await gs('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js');
+ (g&&window.gsap)?row('ok','GSAP loads from the internet'):row('bad','GSAP did not load','Your connection, an ad blocker or a content blocker may be blocking cdnjs.cloudflare.com.');
+ (st&&window.ScrollTrigger)?row('ok','ScrollTrigger loads'):row('bad','ScrollTrigger did not load');
+ window.createImageBitmap?row('ok','createImageBitmap supported'):row('warn','createImageBitmap not supported','Old browser; a slower fallback is used.');
+ (window.CSS&&CSS.supports('height','100svh'))?row('ok','100svh supported'):row('warn','100svh not supported','Older browser; falls back to 100vh.');
+ var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+ row(rm?'warn':'ok','Reduce-motion setting: '+(rm?'ON':'off'),rm?'The new intro.js ignores this. The OLD one hid the intro when it was on.':'');
+ row('ok','Your browser',navigator.userAgent+' | screen '+screen.width+'x'+screen.height);
+ var s=document.getElementById('sum');
+ if(bad){s.style.background='#E0533C';s.textContent=bad+' problem(s) found. Screenshot this page and send it to Claude.'}
+ else{s.textContent='Everything looks fine. If the intro still does not play, screenshot this page and tell Claude.'}
+})();
+</script></body></html>

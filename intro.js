@@ -9,7 +9,12 @@
   function ready() { root.classList.remove('vc-pending'); }
 
   var header = document.querySelector('header');
-  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.__vcIntro = 'phone-v3';
+  // Many phones have "reduce motion" / battery-saver animation settings turned on, which would
+  // silently hide the intro. The animation is controlled by the user's own scrolling, so it is
+  // shown anyway (there is a Skip button). Set to true to hide it for those users instead.
+  var RESPECT_REDUCED_MOTION = false;
+  var reduce = RESPECT_REDUCED_MOTION && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Coming back from Spotify login (?code=...) should land straight in the app.
   var returning = window.__vcReturning || /[?&](code|error)=/.test(location.search);
   if (!window.gsap || !window.ScrollTrigger) console.warn('VibeCapsule intro: GSAP did not load, skipping intro');
