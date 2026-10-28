@@ -1,6 +1,8 @@
 /* VibeCapsule scroll intro: canvas frame sequence scrubbed by GSAP ScrollTrigger.
-   Plays once at the top of the page. When the user scrolls into the app, the intro is
-   removed for good, so scrolling back up stops at the playlist link box. */
+   Plays at the top of the page. When the user scrolls into the app, the intro is
+   removed for good, so scrolling back up stops at the playlist link box.
+   Phone-friendly: frames are downloaded as small files but only ~25 are decoded
+   at a time, so it does not run out of memory on iPhones / low-end Androids. */
 (function () {
   'use strict';
   var root = document.documentElement;
@@ -10,11 +12,25 @@
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Coming back from Spotify login (?code=...) should land straight in the app.
   var returning = window.__vcReturning || /[?&](code|error)=/.test(location.search);
+  if (!window.gsap || !window.ScrollTrigger) console.warn('VibeCapsule intro: GSAP did not load, skipping intro');
   if (!header || reduce || returning || !window.gsap || !window.ScrollTrigger) { ready(); return; }
+
+  // SETTING: false = intro plays on every visit (with Skip button). true = only the first visit in this browser.
+  var PLAY_ONCE = false;
+  if (PLAY_ONCE) {
+    try {
+      if (localStorage.getItem('vcIntroSeen')) { ready(); return; }
+      localStorage.setItem('vcIntroSeen', '1');
+    } catch (e) {}
+  }
   gsap.registerPlugin(ScrollTrigger);
 
   var N = 180;
-  var src = function (i) { return 'frames/f' + String(i + 1).padStart(3, '0') + '.jpg'; };
+  var WINDOW = 12; // frames decoded on each side of the current frame
+  var src = function (i) {
+    if (window.VC_FRAMES) return window.VC_FRAMES[i];
+    return 'frames/f' + String(i + 1).padStart(3, '0') + '.jpg';
+  };
   var BG = '#EEECDF';
 
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -51,33 +67,71 @@
 
   /* ---------- state ---------- */
   var ctx = canvas.getContext('2d');
-  var imgs = new Array(N);
-  var loaded = 0, started = false, finished = false, tl = null, ticking = false;
+  var blobs = new Array(N);     // compressed files (small)
+  var bitmaps = new Array(N);   // decoded frames (only a window of these exist)
+  var pendingDecode = {};
+  var done = 0, started = false, finished = false, tl = null, ticking = false;
   var state = { frame: 0 };
 
-  /* ---------- preload ---------- */
+  /* ---------- download all frames as compressed blobs ---------- */
+  function dataToBlob(u) {
+    var m = /^data:([^;]+);base64,(.*)$/.exec(u);
+    var bin = atob(m[2]), arr = new Uint8Array(bin.length);
+    for (var k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+    return new Blob([arr], { type: m[1] });
+  }
+  function getBlob(u) {
+    if (u.indexOf('data:') === 0) return Promise.resolve(dataToBlob(u));
+    return fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); });
+  }
   function onFrame() {
-    loaded++;
-    var p = Math.round((loaded / N) * 100);
+    done++;
+    var p = Math.round((done / N) * 100);
     fill.style.width = p + '%';
     pct.textContent = 'Loading ' + p + '%';
-    if (loaded >= N) start();
+    if (done >= N) start();
   }
   for (var i = 0; i < N; i++) {
-    var im = new Image();
-    im.decoding = 'async';
-    im.onload = onFrame;
-    im.onerror = onFrame;
-    im.src = src(i);
-    imgs[i] = im;
+    (function (j) {
+      getBlob(src(j)).then(function (b) { blobs[j] = b; onFrame(); }, function () { onFrame(); });
+    })(i);
   }
   setTimeout(function () { if (!started && !finished) start(); }, 25000); // don't hang on a slow connection
 
-  function ok(im) { return im && im.complete && im.naturalWidth > 0; }
+  /* ---------- decode only the frames near the current one ---------- */
+  function decode(b) {
+    if (window.createImageBitmap) return createImageBitmap(b);
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(b), im = new Image();
+      im.onload = function () { URL.revokeObjectURL(u); res(im); };
+      im.onerror = function () { URL.revokeObjectURL(u); rej(); };
+      im.src = u;
+    });
+  }
+  function ensure(center) {
+    for (var d = -WINDOW; d <= WINDOW; d++) {
+      var j = center + d;
+      if (j < 0 || j >= N || bitmaps[j] || pendingDecode[j] || !blobs[j]) continue;
+      pendingDecode[j] = (function (j) {
+        return decode(blobs[j]).then(function (bm) {
+          delete pendingDecode[j];
+          if (finished) { if (bm.close) bm.close(); return; }
+          bitmaps[j] = bm;
+          if (j === Math.round(state.frame)) render();
+        }, function () { delete pendingDecode[j]; });
+      })(j);
+    }
+    for (var k = 0; k < N; k++) {
+      if (bitmaps[k] && Math.abs(k - center) > WINDOW + 6) {
+        if (bitmaps[k].close) bitmaps[k].close();
+        bitmaps[k] = null;
+      }
+    }
+  }
   function pick(i) {
     for (var d = 0; d < N; d++) {
-      if (ok(imgs[i - d])) return imgs[i - d];
-      if (ok(imgs[i + d])) return imgs[i + d];
+      if (bitmaps[i - d]) return bitmaps[i - d];
+      if (bitmaps[i + d]) return bitmaps[i + d];
     }
     return null;
   }
@@ -90,11 +144,12 @@
   }
   function render() {
     var i = Math.max(0, Math.min(N - 1, Math.round(state.frame)));
+    ensure(i);
     var im = pick(i);
     var cw = canvas.width, ch = canvas.height;
     ctx.fillStyle = BG; ctx.fillRect(0, 0, cw, ch);
     if (!im) return;
-    var iw = im.naturalWidth, ih = im.naturalHeight;
+    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
     // wide screens: fill the screen; tall/phone screens: show the whole frame
     var s = (cw / ch >= 1.2) ? Math.max(cw / iw, ch / ih) : Math.min(cw / iw, ch / ih);
     var dw = iw * s, dh = ih * s;
@@ -107,7 +162,24 @@
   function start() {
     if (started || finished) return;
     started = true;
-    if (!imgs.some(ok)) { finish(true); return; } // frames missing: just show the app
+    if (!blobs.some(Boolean)) { // frames missing: show the app and say why
+      console.error('VibeCapsule intro: frames not found (looked for ' + src(0) + ')');
+      finish(true);
+      var t = el('div', '', 'Intro frames not found: upload the "frames" folder next to index.html');
+      t.style.cssText = 'position:fixed;z-index:200;left:12px;right:12px;top:12px;padding:10px 12px;background:#E0533C;color:#FBF9F4;border:2px solid #0F1A34;font:700 12px "Space Mono",monospace';
+      document.body.appendChild(t);
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 12000);
+      return;
+    }
+    ensure(0);
+    Promise.race([
+      Promise.all(Object.keys(pendingDecode).map(function (k) { return pendingDecode[k]; }).slice(0, 3)),
+      new Promise(function (r) { setTimeout(r, 4000); })
+    ]).then(begin);
+  }
+
+  function begin() {
+    if (finished) return;
     sizeCanvas(); render();
     loader.classList.add('vc-out');
     setTimeout(function () { if (loader.parentNode) loader.parentNode.removeChild(loader); }, 400);
@@ -149,6 +221,7 @@
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onResize);
     try { if (tl) { if (tl.scrollTrigger) tl.scrollTrigger.kill(); tl.kill(); } } catch (e) {}
+    for (var k = 0; k < N; k++) { if (bitmaps[k] && bitmaps[k].close) bitmaps[k].close(); bitmaps[k] = null; blobs[k] = null; }
     if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
     if (loader.parentNode) loader.parentNode.removeChild(loader);
     root.classList.remove('vc-lock', 'vc-intro-on');
