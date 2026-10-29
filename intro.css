@@ -2,7 +2,7 @@
 html.vc-pending body{visibility:hidden}
 html.vc-lock,html.vc-lock body{overflow:hidden}
 
-.vc-intro{position:relative;height:550vh;height:550svh;background:#EEECDF}
+.vc-intro{position:relative;z-index:60;height:550vh;height:550svh;background:#EEECDF}
 .vc-stage{position:sticky;top:0;width:100%;height:100vh;height:100svh;overflow:hidden;background:#EEECDF}
 .vc-canvas{display:block;width:100%;height:100%}
 
@@ -35,5 +35,4 @@ html.vc-lock,html.vc-lock body{overflow:hidden}
 .vc-loader .vc-bar i{display:block;height:100%;width:0;background:#E0533C}
 .vc-loader small{font-size:11px;font-weight:700;letter-spacing:.06em}
 
-/* seam between the last frame and the app */
-html.vc-intro-on header{border-top:3px solid #0F1A34}
+

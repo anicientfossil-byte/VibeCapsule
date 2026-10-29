@@ -33,7 +33,7 @@ async function findYouTubeId(query) {
   }
 }
 
-function buildTrack(t, index, playlistId, playlistTitle, videoId, query) {
+function buildTrack(t, index, playlistId, playlistTitle, videoId, query, cover) {
   return {
     id: t.uri || `spotify_track_${playlistId}_${index}`,
     title: t.title.toUpperCase(),
@@ -45,6 +45,7 @@ function buildTrack(t, index, playlistId, playlistTitle, videoId, query) {
     tempoBpm: 100 + ((index * 11) % 45),
     energy: 0.65 + ((index * 7) % 30) / 100,
     danceability: 0.6 + ((index * 5) % 35) / 100,
+    albumArtUrl: cover || '',
     youtubeVideoId: videoId,
     youtubeQuery: query
   };
@@ -66,6 +67,7 @@ async function handlePlaylist(url, headers) {
   const html = await res.text();
 
   let playlistTitle = 'SPOTIFY PLAYLIST';
+  let playlistCover = '';
   let raw = [];
   const next = html.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
   if (next) {
@@ -74,6 +76,7 @@ async function handlePlaylist(url, headers) {
       if (entity) {
         playlistTitle = entity.name || playlistTitle;
         raw = entity.trackList || [];
+        playlistCover = (entity.coverArt && entity.coverArt.sources && entity.coverArt.sources[0] && entity.coverArt.sources[0].url) || (entity.visualIdentity && entity.visualIdentity.image && entity.visualIdentity.image[0] && entity.visualIdentity.image[0].url) || '';
       }
     } catch {}
   }
@@ -89,7 +92,16 @@ async function handlePlaylist(url, headers) {
       const title = (t.title || `Track ${i + 1}`).trim();
       const artist = (t.subtitle || 'Various Artists').trim();
       const query = `${artist} ${title} audio`;
-      return buildTrack({ title, artist, uri: t.uri, duration: t.duration }, i, playlistId, playlistTitle, await findYouTubeId(query), query);
+      const videoId = await findYouTubeId(query);
+      const cover =
+        (t.album && t.album.coverArt && t.album.coverArt.sources && t.album.coverArt.sources[0] && t.album.coverArt.sources[0].url) ||
+        (t.coverArt && t.coverArt.sources && t.coverArt.sources[0] && t.coverArt.sources[0].url) ||
+        (t.images && t.images[0] && t.images[0].url) ||
+        (t.audioClip && t.audioClip.thumbnailUrl) ||
+        t.coverArtUrl || t.imageUrl ||
+        (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '') ||
+        playlistCover;
+      return buildTrack({ title, artist, uri: t.uri, duration: t.duration }, i, playlistId, playlistTitle, videoId, query, cover);
     })
   );
   return json(

@@ -7,6 +7,14 @@
   'use strict';
   var root = document.documentElement;
   function ready() { root.classList.remove('vc-pending'); }
+  // Tell the app (React) it may start. It waits for this so the 3D scene does not run during the intro.
+  var released = false;
+  function releaseApp() {
+    if (released) return;
+    released = true;
+    window.__vcIntroPending = false;
+    window.dispatchEvent(new Event('vc-intro-mount'));
+  }
 
   // ---- debug panel: open the site with ?debug=1 on the end of the address ----
   var DEBUG = /[?&]debug/.test(location.search);
@@ -26,10 +34,10 @@
   }
   window.addEventListener('error', function (e) { log('ERROR: ' + e.message + ' @' + (e.lineno || '?')); });
   window.addEventListener('unhandledrejection', function (e) { log('PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)); });
-  log('intro.js running, version phone-v3.1');
+  log('intro.js running, version react-v1');
 
-  var header = document.querySelector('header');
-  window.__vcIntro = 'phone-v3';
+  var header = document.getElementById('root') || document.querySelector('header');
+  window.__vcIntro = 'react-v1';
   // Many phones have "reduce motion" / battery-saver animation settings turned on, which would
   // silently hide the intro. The animation is controlled by the user's own scrolling, so it is
   // shown anyway (there is a Skip button). Set to true to hide it for those users instead.
@@ -39,13 +47,13 @@
   var returning = window.__vcReturning || /[?&](code|error)=/.test(location.search);
   log('gsap: ' + !!window.gsap + '  ScrollTrigger: ' + !!window.ScrollTrigger + '  header: ' + !!header + '  returning: ' + !!returning + '  reduce: ' + !!reduce);
   if (!window.gsap || !window.ScrollTrigger) console.warn('VibeCapsule intro: GSAP did not load, skipping intro');
-  if (!header || reduce || returning || !window.gsap || !window.ScrollTrigger) { ready(); return; }
+  if (!header || reduce || returning || !window.gsap || !window.ScrollTrigger) { ready(); releaseApp(); return; }
 
   // SETTING: false = intro plays on every visit (with Skip button). true = only the first visit in this browser.
   var PLAY_ONCE = false;
   if (PLAY_ONCE) {
     try {
-      if (localStorage.getItem('vcIntroSeen')) { ready(); return; }
+      if (localStorage.getItem('vcIntroSeen')) { ready(); releaseApp(); return; }
       localStorage.setItem('vcIntroSeen', '1');
     } catch (e) {}
   }
@@ -58,6 +66,9 @@
     return 'frames/f' + String(i + 1).padStart(3, '0') + '.jpg';
   };
   var BG = '#EEECDF';
+  // horizontal centre of the action (0 = left edge, 1 = right edge) for each of the 180 frames
+  var FOCAL = [0.649, 0.648, 0.647, 0.645, 0.643, 0.64, 0.636, 0.633, 0.629, 0.625, 0.62, 0.616, 0.611, 0.607, 0.602, 0.597, 0.593, 0.588, 0.584, 0.58, 0.576, 0.572, 0.568, 0.564, 0.559, 0.555, 0.551, 0.547, 0.543, 0.54, 0.536, 0.532, 0.528, 0.524, 0.52, 0.515, 0.511, 0.507, 0.502, 0.498, 0.494, 0.489, 0.485, 0.481, 0.477, 0.473, 0.469, 0.465, 0.461, 0.457, 0.454, 0.451, 0.449, 0.446, 0.444, 0.444, 0.444, 0.444, 0.445, 0.446, 0.448, 0.451, 0.453, 0.455, 0.458, 0.461, 0.465, 0.468, 0.473, 0.477, 0.481, 0.485, 0.489, 0.493, 0.496, 0.499, 0.502, 0.504, 0.506, 0.508, 0.509, 0.511, 0.512, 0.513, 0.513, 0.514, 0.515, 0.516, 0.517, 0.518, 0.519, 0.52, 0.521, 0.522, 0.523, 0.524, 0.525, 0.525, 0.526, 0.525, 0.524, 0.525, 0.525, 0.525, 0.525, 0.525, 0.525, 0.525, 0.525, 0.526, 0.526, 0.526, 0.526, 0.526, 0.526, 0.526, 0.525, 0.524, 0.523, 0.521, 0.519, 0.517, 0.514, 0.512, 0.511, 0.509, 0.508, 0.508, 0.507, 0.507, 0.508, 0.509, 0.51, 0.511, 0.512, 0.513, 0.515, 0.517, 0.518, 0.52, 0.521, 0.523, 0.524, 0.525, 0.527, 0.528, 0.529, 0.531, 0.533, 0.535, 0.537, 0.54, 0.541, 0.542, 0.544, 0.545, 0.546, 0.547, 0.548, 0.549, 0.549, 0.549, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548, 0.548];
+  var FOCAL = [0.649,0.648,0.647,0.645,0.643,0.64,0.636,0.633,0.629,0.625,0.62,0.616,0.611,0.607,0.602,0.597,0.593,0.588,0.584,0.58,0.576,0.572,0.568,0.564,0.559,0.555,0.551,0.547,0.543,0.54,0.536,0.532,0.528,0.524,0.52,0.515,0.511,0.507,0.502,0.498,0.494,0.489,0.485,0.481,0.477,0.473,0.469,0.465,0.461,0.457,0.454,0.451,0.449,0.446,0.444,0.444,0.444,0.444,0.445,0.446,0.448,0.451,0.453,0.455,0.458,0.461,0.465,0.468,0.473,0.477,0.481,0.485,0.489,0.493,0.496,0.499,0.502,0.504,0.506,0.508,0.509,0.511,0.512,0.513,0.513,0.514,0.515,0.516,0.517,0.518,0.519,0.52,0.521,0.522,0.523,0.524,0.525,0.525,0.526,0.525,0.524,0.525,0.525,0.525,0.525,0.525,0.525,0.525,0.525,0.526,0.526,0.526,0.526,0.526,0.526,0.526,0.525,0.524,0.523,0.521,0.519,0.517,0.514,0.512,0.511,0.509,0.508,0.508,0.507,0.507,0.508,0.509,0.51,0.511,0.512,0.513,0.515,0.517,0.518,0.52,0.521,0.523,0.524,0.525,0.527,0.528,0.529,0.531,0.533,0.535,0.537,0.54,0.541,0.542,0.544,0.545,0.546,0.547,0.548,0.549,0.549,0.549,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548,0.548];
 
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
@@ -178,11 +189,14 @@
     ctx.fillStyle = BG; ctx.fillRect(0, 0, cw, ch);
     if (!im) return;
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    // wide screens: fill the screen; tall/phone screens: show the whole frame
-    var s = (cw / ch >= 1.2) ? Math.max(cw / iw, ch / ih) : Math.min(cw / iw, ch / ih);
+    // Always fill the whole screen. On tall phone screens the picture is cropped on the sides and the
+    // visible window slides to follow the dragon (FOCAL), so it stays in view.
+    var s = Math.max(cw / iw, ch / ih);
     var dw = iw * s, dh = ih * s;
+    var dx = Math.min(0, Math.max(cw - dw, cw / 2 - FOCAL[i] * dw));
+    var dy = (ch - dh) / 2;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(im, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    ctx.drawImage(im, dx, dy, dw, dh);
   }
   function onResize() { if (!finished) { sizeCanvas(); render(); } }
 
@@ -220,6 +234,7 @@
         trigger: wrap, start: 'top top', end: 'bottom bottom', scrub: 0.4,
         onUpdate: function (self) {
           if (DEBUG && Date.now() - lastDbg > 400) { lastDbg = Date.now(); log('scroll ' + Math.round(window.pageYOffset) + '  progress ' + self.progress.toFixed(2) + '  frame ' + Math.round(state.frame) + '  bitmaps ' + bitmaps.filter(Boolean).length); }
+          if (self.progress > 0.85) releaseApp();
           cue.classList.toggle('vc-hide', self.progress > 0.02);
           endCue.classList.toggle('vc-show', self.progress > 0.95);
         }
@@ -259,7 +274,13 @@
     if (loader.parentNode) loader.parentNode.removeChild(loader);
     root.classList.remove('vc-lock', 'vc-intro-on');
     // same view as before, minus the removed intro: scrolling up now stops at the top of the app
-    window.scrollTo(0, toTop ? 0 : Math.max(0, sy - h));
+    var target = toTop ? 0 : Math.max(0, sy - h);
+    releaseApp();
+    try {
+      if (window.__vcLenis && window.__vcLenis.scrollTo) window.__vcLenis.scrollTo(target, { immediate: true, force: true });
+      else window.scrollTo(0, target);
+    } catch (e) { window.scrollTo(0, target); }
+    window.dispatchEvent(new Event('vc-intro-finished'));
   }
 
   skipBtn.addEventListener('click', function () { finish(true); });

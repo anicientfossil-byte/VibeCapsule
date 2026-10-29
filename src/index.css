@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-base: #05030a;
+    --color-surface-obsidian: #0b0617;
+    --color-surface-card: rgba(15, 8, 30, 0.65);
+    --color-glow-magenta: #d946ef;
+    --color-glow-purple: #a855f7;
+    --color-glow-violet: #8b5cf6;
+    --color-text-primary: #ede9fe;
+    --color-text-secondary: #a78bfa;
+  }
+
+  html, body {
+    background-color: #05030a;
+    color: #ede9fe;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Serif Typography Tokens for Oversized Focal Headlines */
+  .font-serif-luxury {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-mono-clean {
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .font-sans-clean {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
+/* Lenis Smooth Scrolling Base Support */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Luminous Glassmorphic Cards & Containers */
+.glass-panel {
+  background: rgba(14, 8, 28, 0.55);
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(18, 9, 36, 0.65);
+  border: 1px solid rgba(217, 70, 239, 0.3);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6), 0 0 25px rgba(217, 70, 239, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.glass-panel-interactive {
+  background: rgba(14, 8, 28, 0.55);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-interactive:hover {
+  background: rgba(22, 11, 46, 0.75);
+  border-color: rgba(217, 70, 239, 0.45);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 30px rgba(168, 85, 247, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Luxury Interactive Buttons */
+.btn-luxury-primary {
+  background: linear-gradient(135deg, #d946ef 0%, #a855f7 50%, #7e22ce 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(217, 70, 239, 0.35);
+  transition: all 0.25s ease-out;
+}
+
+.btn-luxury-primary:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 6px 28px rgba(217, 70, 239, 0.55);
+  transform: translateY(-1px);
+}
+
+.btn-luxury-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ede9fe;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  transition: all 0.25s ease-out;
+}
+
+.btn-luxury-secondary:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(217, 70, 239, 0.5);
+  color: #ffffff;
+}
+
+/* Atmospheric Glow Accents */
+.text-glow-magenta {
+  text-shadow: 0 0 20px rgba(217, 70, 239, 0.65), 0 0 40px rgba(217, 70, 239, 0.25);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 20px rgba(168, 85, 247, 0.65);
+}
+
+/* Editorial Serif Heading Emphases */
+.serif-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.serif-display em, .serif-display i {
+  font-style: italic;
+  font-weight: 400;
+  color: #f472b6;
+}
+
+/* Refined Deep Violet Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #05030a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 70, 239, 0.7);
+}
