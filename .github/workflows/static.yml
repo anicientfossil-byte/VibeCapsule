@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run build
         env:
           # "/<repo>/" for project sites such as https://user.github.io/VibeCapsule/
